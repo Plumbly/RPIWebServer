@@ -1,0 +1,10 @@
+{
+  "name": "rpi-web-server",
+  "version": "0.0.0",
+  "description": "RPiWebServer",
+  "main": "server.js",
+  "author": {
+    "name": "JPlumbly",
+    "email": ""
+  }
+}
