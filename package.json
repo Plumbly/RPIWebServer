@@ -6,5 +6,8 @@
   "author": {
     "name": "JPlumbly",
     "email": ""
+  },
+  "dependencies": {
+    "httpdispatcher": "^1.0.0"
   }
 }
