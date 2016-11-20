@@ -3,28 +3,21 @@
     utility = require('./utility.js'),
     url = require('url'),
     path = require('path'),
-    fileSys = require('fs');
+    fs = require('fs');
 
 var Server;
 
 dispatcher.setStatic('resources');
-dispatcher.setStaticDirname('.');
+dispatcher.setStaticDirname(process.cwd());
 
-dispatcher.onError(function (request, response) {
-    response.writeHead(404, { 'Content-Type': 'text/plain' });
-    response.end("Page or resource could not be found.")
-});
+dispatcher.onError(handleNotFound);
 
-dispatcher.dispatchError = function (request, response) {
-    response.writeHead(500, { 'Content-Type': 'text/plain' });
-    response.end("Internal Server Error.")
-}
+dispatcher.dispatchError = handleError;
 
 dispatcher.registerRoutes = function (routes) {
-    
+    var self = this;
+
     var registerString = "Registering routes:\n";
-
-
 
     for (var i = 0, length = routes.length; i < length; i++) {
         
@@ -38,22 +31,47 @@ dispatcher.registerRoutes = function (routes) {
                 fullyQualifiedPath = path.join(process.cwd(), uri);
                 extension = path.extname(uri);
             
-            fs.exists(filename, function (exists) {
+            fs.exists(fullyQualifiedPath, function (exists) {
                 if (!exists) {
-                    dispatcher.dispatchError();
+                    handleNotFound(request, response);
                     return;
                 }
-            });
 
-            switch (extension) {
-                case ".html":
-                    response.end("Serving Html file.");
-                    break;
-            }
-        });
-
-        utility.log(registerString, "INFO");
+                fs.readFile(fullyQualifiedPath, (fullyQualifiedPath.endsWith("html") || fullyQualifiedPath.endsWith("js")) ? "utf8" : "binary", function (err, file) {
+                    if (err) {
+                        handleError(request, response)
+                    };
+                    
+                    if (fullyQualifiedPath.endsWith("html")) {
+                        
+                        response.writeHead(200, { "Content-Type": "text/html" });
+                        response.write(file);
+                    } else if (fullyQualifiedPath.endsWith("js")) {
+                        response.writeHead(200, { "Content-Type": "text/javascript" });
+                        response.write(file);
+                    }
+                    else {
+                        
+                        response.writeHead(200, { "Content-Type": "image/png" });
+                        response.write(file, "binary");
+                    }
+                    response.end();
+                });
+            });           
+        });        
     }
+
+    utility.log(registerString, "INFO");
+}
+
+function handleNotFound(request, response){
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.end("Page or resource could not be found.")
+}
+
+function handleError(request, response){
+    response.writeHead(500, { 'Content-Type': 'text/plain' });
+    response.end("Internal Server Error.")
 }
 
 function handleServerRequest(request, response){
@@ -87,7 +105,17 @@ initialiseServer(8080);
 
 dispatcher.registerRoutes([
     {
+        url: "/favicon.ico",
+        acceptedVerbs: ["GET"]
+    },
+
+    {
         url: "/index.html",
+        acceptedVerbs: ["GET"]
+    },
+
+    {
+        url: "/testScriptFile.js",
         acceptedVerbs: ["GET"]
     }
 ])
